@@ -40,7 +40,7 @@ data_list = load_multiple_data([os.path.join(measurementFolder,'2020-MSc-Angelo-
                                                                      dattype='oddball')
 #%%
 epo_o,epo_t_o,mrk_class_o,clab,mnt = prepareData(data_list,downsample_factor=10,highPassCutOff=highpass,lowPassCutOff=lowpass,ival=ival,
-                                                                     ref_ival=[-100,0],reject_voltage=1000,nRemovePCA = 0,reject_channels=list(rejectChannels)
+                                                                     ref_ival=[-100,0],reject_voltage=1000,nRemovePCA = 0
                                                                      )  
 #%%
 data_list_art = load_multiple_data([os.path.join(measurementFolder,'2020-MSc-Angelo-1__artifactTemp.vhdr'),
@@ -49,7 +49,7 @@ data_list_art = load_multiple_data([os.path.join(measurementFolder,'2020-MSc-Ang
                                          os.path.join(measurementFolder,'2020-MSc-Angelo-1__artifactTemp04.vhdr')])
 #%%
 epo_a,epo_t_a,mrk_class_a,clab,mnt = prepareData(data_list_art,downsample_factor=10,highPassCutOff=highpass,lowPassCutOff=lowpass,ival=ival,
-                                                                     ref_ival=[-100,0],reject_voltage=10000,nRemovePCA = 0,reject_channels=list(rejectChannels)
+                                                                     ref_ival=[-100,0],reject_voltage=10000,nRemovePCA = 0
                                                                      )
 #%%
 """ Classify artifact vs target
@@ -60,11 +60,11 @@ for artifact in np.unique(mrk_class_a):
     
     epo = np.concatenate([epo_o_target,epo_a_art],axis=2)
     mrk_class = np.concatenate([np.zeros(epo_o_target.shape[2]),np.ones(epo_a_art.shape[2])],axis=0)
-    
-    numIterations = 3
+    epo,mrk_class = balanceClasses(epo, mrk_class)
+    numIterations = 1
     print("Artifact: "+str(artifactDict[artifact]))
     for i in range(numIterations):
-        params=calcAndValLDATempSpat(epo, epo_t_o, mrk_class, ivals,returnParams=True)
+        params=calcAndValLDATempSpat(epo, epo_t_o, mrk_class, ivals,returnParams=True,n_folds=21)
  #%%
 CSPintervals=np.array([[[300,400],[400,500],[500,600]], #Press Feet
                    [[100,200],[200,300],[300,400],[400,500]], #Lift Tongue
@@ -81,6 +81,7 @@ for idx,artifact in enumerate(np.unique(mrk_class_a)):
     epo_a_art = epo_a[:,:,mrk_class_a==artifact]
     epo = np.concatenate([epo_o_,epo_a_art],axis=2)
     mrk_class = np.concatenate([mrk_class_o[mrk_class_o==0],np.ones(len(mrk_class_a[mrk_class_a==artifact]))],axis=0)
+    epo,mrk_class = balanceClasses(epo, mrk_class)
     W,_,d = calculate_csp(epo, mrk_class)
     """
     plt.figure()

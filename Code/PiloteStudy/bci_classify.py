@@ -62,10 +62,10 @@ def calcAndValLDATemp(epo,epo_t,mrk_class,ival):
     for i in range(len(ival)):
        meanAmpl[i]=np.mean(epo[sampleIndices[i],:,:].squeeze(),axis=0)
        print('***Interval '+str(ival[i])+' ms :')
-       print('  Using common LDA   : ' +str(crossvalidation(train_LDA,meanAmpl[i],mrk_class,3,False) [0] ))
-       print('  Using shrinked LDA : ' +str(crossvalidation(train_LDAshrink,meanAmpl[i],mrk_class,3,False)[0]))
+       print('  Using common LDA   : ' +str(crossvalidation(train_LDA,meanAmpl[i],mrk_class,10,False) [0] ))
+       print('  Using shrinked LDA : ' +str(crossvalidation(train_LDAshrink,meanAmpl[i],mrk_class,10,False)[0]))
 
-def calcAndValLDATempSpat(epo, epo_t, mrk_class, ivals,returnParams=False):  
+def calcAndValLDATempSpat(epo, epo_t, mrk_class, ivals,returnParams=False,n_folds=9):  
     '''
     Description:
         Crossvalidates LDA and Shrinked-LDA classifier on spatio-temporal
@@ -84,10 +84,9 @@ def calcAndValLDATempSpat(epo, epo_t, mrk_class, ivals,returnParams=False):
         calculated classifiers
     '''
     meanAmplFeature,mrk_class = convertEpoToFeature(epo,epo_t,mrk_class,ivals)
-    print(meanAmplFeature.shape)
     print('**** All features in one vector: ****')
-    print('  Using common LDA   : {:5.1f}'.format(crossvalidation(train_LDA,meanAmplFeature,mrk_class,3,False,False)[0]  ))
-    errTeFP,errTeFN,paramsLDA = crossvalidationDetailedLoss(train_LDAshrink,meanAmplFeature,mrk_class,3,False,returnParams)
+    print('  Using common LDA   : {:5.1f}'.format(crossvalidation(train_LDA,meanAmplFeature,mrk_class,n_folds,False,False)[0]  ))
+    errTeFP,errTeFN,paramsLDA = crossvalidationDetailedLoss(train_LDAshrink,meanAmplFeature,mrk_class,n_folds,False,returnParams)
     print('  Using shrinked LDA : FP: {:5.1f} , FN: {:5.1f}'.format(errTeFP,errTeFN))
     if returnParams:
         return paramsLDA
@@ -172,3 +171,17 @@ def validateLDA(params,epo,epo_t,mrk_class,ivals):
         out = w.T.dot(X) - b
         errTe.append(np.sum(out>0)/y.shape*100)
     return np.mean(errTe)
+
+def balanceClasses(epo,mrk_class,_type='upsample'):
+    sample_0,sample_1 = sum(mrk_class==0),sum(mrk_class==1)
+    if sample_0 > sample_1:
+        mrk_class_ = np.concatenate((mrk_class,np.ones(sample_0-sample_1)))
+        sample_indices = np.argwhere(mrk_class==1).squeeze()
+        np.random.shuffle(sample_indices)
+    else:
+        mrk_class_ = np.concatenate((mrk_class,np.zeros(sample_1-sample_0)))
+        sample_indices = np.argwhere(mrk_class==0).squeeze()
+        np.random.shuffle(sample_indices)
+    while epo.shape[2]<mrk_class_.shape[0]:
+        epo = np.concatenate((epo,epo[:,:,sample_indices[:(mrk_class_.shape[0]-epo.shape[2])]]),axis=2)
+    return epo,mrk_class_

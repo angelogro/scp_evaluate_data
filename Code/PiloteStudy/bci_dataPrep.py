@@ -18,7 +18,7 @@ def load_data(dat,dattype='oddball'):
     erpmarkers = list(filter(lambda x: int(x[1][1:])<200,dat.markers))
     mrk_pos = np.array(erpmarkers)[:,0].astype(np.float).astype(np.uint32)
     cnt =  dat.data.T
-    e = ElectrodePositions(os.path.join('/home/angelo/Master_Arbeit/Data/','elec32_pos.csv'))
+    e = ElectrodePositions(os.path.join('/home/angelo/Daten/Master_Arbeit/Master_Arbeit/Data/','elec32_pos.csv'))
     
     mnt = np.array(list(map(lambda x:e.getCoord(x),clab)))
     if dattype == 'artifact':
