@@ -6,7 +6,7 @@ Created on Sun Feb  9 16:37:49 2020
 @author: angelo
 """
 import os
-projectFolder = '/home/angelo/Master_Arbeit/'
+projectFolder = '/home/angelo/Daten/Master_Arbeit/Master_Arbeit'
 import sys
 sys.path.insert(1,os.path.join(projectFolder,'Code/libs'))
 from wyrm import io
@@ -54,6 +54,7 @@ epo_a,epo_t_a,mrk_class_a,clab,mnt = prepareData(data_list_art,downsample_factor
 #%%
 """ Classify artifact vs target
 """
+"""
 epo_o_target = epo_o[:,:,mrk_class_o==0]
 for artifact in np.unique(mrk_class_a):
     epo_a_art = epo_a[:,:,mrk_class_a==artifact]
@@ -65,12 +66,13 @@ for artifact in np.unique(mrk_class_a):
     print("Artifact: "+str(artifactDict[artifact]))
     for i in range(numIterations):
         params=calcAndValLDATempSpat(epo, epo_t_o, mrk_class, ivals,returnParams=True,n_folds=21)
+"""
  #%%
 CSPintervals=np.array([[[300,400],[400,500],[500,600]], #Press Feet
                    [[100,200],[200,300],[300,400],[400,500]], #Lift Tongue
                    [[100,200],[200,300],[300,400],[400,500]], #Clinch Teeth
                    [[200,300],[300,400],[400,500]], #Push Breath
-                   [[300,400],[400,500],[500,600]], #Wrinkle Nose
+                   [[300,400],[400,500],[500,600]], #Wrinkle NoseTrue
                    [[100,200],[200,300],[300,400]]])  #Swallow
                    
 #%% Calculate CSP
@@ -83,14 +85,14 @@ for idx,artifact in enumerate(np.unique(mrk_class_a)):
     mrk_class = np.concatenate([mrk_class_o[mrk_class_o==0],np.ones(len(mrk_class_a[mrk_class_a==artifact]))],axis=0)
     epo,mrk_class = balanceClasses(epo, mrk_class)
     W,_,d = calculate_csp(epo, mrk_class)
-    """
+    
     plt.figure()
     plt.plot(d,'.',label='right')
     plt.plot(1-d,'.',label='left')
     plt.xlabel('Rank number of Eigenvector [#]')
     plt.ylabel('Generalized Eigenvalue')
     plt.legend()
-    """
+    
     # Calculate maximum difference in eigenvalues of the two classes
     ddif = np.abs(d-(1-d))
     
@@ -102,14 +104,14 @@ for idx,artifact in enumerate(np.unique(mrk_class_a)):
     
     AllCSP = apply_spatial_filter(epo,W)
     A = np.dot(np.dot(np.cov(epo.reshape(epo.shape[1],-1)),W),np.linalg.inv(np.cov(AllCSP.reshape(epo_o.shape[1],-1))))
-    """
+    
     plt.figure(figsize=(8,8))
     n=221
     for i in range(eigidx.shape[0]):
         plt.subplot(n+i)
         plt.title('CSP filter '+str(4-i))
         bci.scalpmap(mnt,A[:,eigidx[i]],clim='sym',cb_label='[a.u.]')
-    """
+    
     
     epoCSP = np.abs(signal.hilbert(CSPs,axis = 0))
     

@@ -8,10 +8,12 @@ Created on Thu Jan 30 16:41:46 2020
 from matplotlib import pyplot as plt
 from matplotlib import cm
 from scipy import signal
+from scipy.signal import savgol_filter
 import numpy as np
 import os
 import bci_minitoolbox as bci
 from global_vars import *
+import matplotlib.ticker as plticker
 
 def plotPSD(signal_,fs,frange=None):
     if frange == None:
@@ -50,12 +52,14 @@ def plotPSDfromEpoMulticlass(epo,mrk_class,clab,sel_channel,sel_mrk_classes,datt
         frange = [0,fs/2]
     plt.figure()
     
+    psds=[]
     for clss in sel_mrk_classes:
         epo_ = epo[:,:,mrk_class==clss]
         epo_ = epo_.swapaxes(0,1)
         epo_ = epo_.swapaxes(2,1)
         epo_ = epo_.reshape(len(clab),-1)
         f, psd = signal.welch(epo_[np.where(clab==sel_channel)[0][0],:], fs=1000,nperseg=4096)
+
         if dattype == 'artifact':
             lab = artifactDict[clss]
         else:
@@ -68,8 +72,14 @@ def plotPSDfromEpoMulticlass(epo,mrk_class,clab,sel_channel,sel_mrk_classes,datt
         plt.title(''.join(['Spectral density @fs=',str(fs),' Hz @channel ',sel_channel]))
         plt.xlabel('frequency / Hz')
         plt.ylabel('PSD')
-        plt.ylim(0,0.5)
+        #plt.ylim(0,0.5)
         plt.legend()
+        intervals = 1.0
+
+        loc = plticker.MultipleLocator(base=intervals)
+        plt.gca().xaxis.set_major_locator(loc)
+        plt.grid(True,'both')
+
     
 def plotPrincipalComponents(cnt,mnt,clab,n=3):
     X=cnt
@@ -108,8 +118,29 @@ def plotScalpmapsOddball(epo,epo_t,clab,mrk_class,intervals,mnt):
            plt.title(''.join([label,', Interval ',str(ival[0]),' - ',str(ival[1])]))
            bci.scalpmap(mnt,epo_cls_ival,clim=[lim_min,lim_max],cb_label='µV',clab=clab)      
 
-            
+def plotScalpmapsArtifact(epo,epo_t,clab,mrk_class,intervals,mnt):
+    
+    fig, axs = plt.subplots( len(np.unique(mrk_class)),len(intervals)+1,figsize=(24,8))
+          
+    for i,mrk_cl in zip(range(len(np.unique(mrk_class))),np.unique(mrk_class)):
+       epo_cls = np.mean(epo[:,:,mrk_class == mrk_cl],axis=2)
+       lim_min, lim_max = 0,0
+       print(artifactDict[mrk_cl])
+       for j,ival in zip(range(len(intervals)),intervals):
+           idx_range = np.where((epo_t>=ival[0])&(epo_t<=ival[1]))
 
+           epo_cls_ival = np.mean(epo_cls[idx_range,:].squeeze(),axis=0)
+           lim_min = np.min(epo_cls_ival) if np.min(epo_cls_ival)<lim_min else lim_min
+           lim_max = np.max(epo_cls_ival) if np.max(epo_cls_ival)>lim_max else lim_max
+           
+           #axs[i,j].title(''.join(['Interval',str(ival[0]),' - ',str(ival[1])]))
+           pcm=bci.scalpmap(mnt,epo_cls_ival,clim=[lim_min,lim_max],cb_label='µV',ax=axs[i,j])    
+       axs[i,len(intervals)].axis('off')
+       fig.colorbar(pcm,shrink=.6, ax=axs[i,len(intervals)])
+       
+    fig.tight_layout(pad=0.0)
+
+    plt.show()
 
 def plotMeanCurves(epo,epo_t,clab,selectedChannels,mrk_class):
     # Sums up the data of all epochs of the same class for each channel
@@ -205,3 +236,60 @@ def plotChannelwiseCovarianceMatrix(epo,epo_t,clab,mrk_class,ref_time):
         ax.set_yticklabels(clab[0::5])
         ax.set_yticks(np.arange(len(clab))[0::5])
         plt.colorbar(shrink=.5, label='[uV]')
+        
+def plotMeanArtifactSignals(epo_artifacts,epo_t,clab,channels,mrk_class):
+    linestyles=['solid','dotted','dashed','dashdot',(0,(5,5)),(0,(3,3,1,3))]
+    fig, axs = plt.subplots( 1,len(channels),figsize=(6*len(channels),6))
+    for i,chan in zip(range(len(channels)),channels):
+        index=np.where(clab==chan)[0]
+        epo_a=epo_artifacts[:,index,:]
+
+        for j,artifact_class in zip(range(len(np.unique(mrk_class))),np.unique(mrk_class)):
+            meanArtifact=np.mean(epo_a[:,:,mrk_class==artifact_class],axis=2)
+            smooth_meanArtifact=savgol_filter(meanArtifact,11,3,axis=0)
+            #np.savetxt(str(artifact_class),meanArtifact)
+            axs[i].plot(epo_t,smooth_meanArtifact,label=artifactDict[artifact_class],linestyle=linestyles[j],linewidth=3)
+        
+            axs[i].set_xlabel('time [ms]'); axs[i].set_ylabel('voltage [µV]');
+            axs[i].set_title('Averaged Epoch at {}'.format(chan))
+        fig.legend(list(map(lambda x:artifactDict[x],np.unique(mrk_class))),ncol=6,loc=8)
+        
+def plotMeanOddballSignals(epo_artifacts,epo_t,clab,channels,mrk_class):
+    linestyles=['solid','dotted','dashed','dashdot',(0,(5,5)),(0,(3,3,1,3))]
+    fig, axs = plt.subplots( 1,len(channels),figsize=(6*len(channels),6))
+    for i,chan in zip(range(len(channels)),channels):
+        index=np.where(clab==chan)[0]
+        epo_a=epo_artifacts[:,index,:]
+
+        for j,artifact_class in zip(range(len(np.unique(mrk_class))),np.unique(mrk_class)):
+            smooth_meanArtifact=np.mean(epo_a[:,:,mrk_class==artifact_class],axis=2)
+            #smooth_meanArtifact=savgol_filter(meanArtifact,11,3,axis=0)
+            #np.savetxt(str(artifact_class),meanArtifact)
+            axs[i].plot(epo_t,smooth_meanArtifact,label=artifactDict[artifact_class],linestyle=linestyles[j],linewidth=3)
+        
+            axs[i].set_xlabel('time [ms]'); axs[i].set_ylabel('voltage [µV]');
+            axs[i].set_title('Averaged Epoch at {}'.format(chan))
+        for xc in [0,200,400,600,800]:
+            axs[i].axvline(x=xc,color='gray',linestyle='dotted')
+    fig.legend(['Target','Non-Targent','Stimulus Onset'],ncol=6,loc=8)
+
+def grouped_barplot(df, cat,subcat, val , err,colors,title=None,legend=False):
+    u = df[cat].unique()
+    x = np.arange(len(u))
+    subx = df[subcat].unique()
+    offsets = (np.arange(len(subx))-np.arange(len(subx)).mean())/(len(subx)+1.)
+    width= np.diff(offsets).mean()
+    for i,gr in enumerate(subx):
+        dfg = df[df[subcat] == gr]
+        plt.bar(x+offsets[i], dfg[val].values, width=width, 
+                label="{} {}".format(subcat, gr), 
+                linewidth=0.3,color=colors[i],edgecolor='k')
+        plt.errorbar(x+offsets[i],dfg[val].values,visible=False,yerr=dfg[err].values,
+                     capsize=4,linewidth=0.7,color='k')
+    plt.xlabel(cat)
+    plt.ylabel(val)
+    plt.xticks(x, u)
+    if legend:
+        plt.legend()
+    plt.title(title)
+    plt.show() 

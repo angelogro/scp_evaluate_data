@@ -9,7 +9,9 @@ Created on Thu Jan 30 17:20:01 2020
 from scipy import signal
 import numpy as np
 import os
+from sklearn.metrics import confusion_matrix
 import bci_minitoolbox as bci
+from sklearn.model_selection import cross_val_score,cross_val_predict,cross_validate
 from bci_classifiers import crossvalidation,train_LDAshrink,train_LDA,loss_weighted_error,crossvalidationDetailedLoss
 
 def convertEpoToFeature(epo,epo_t,mrk_class,ivals):
@@ -33,6 +35,7 @@ def convertEpoToFeature(epo,epo_t,mrk_class,ivals):
     
     sampleIndices = [np.where((epo_t>=ivals[i][0])&(epo_t<=ivals[i][1])) for i in range (len(ivals))]
     meanAmpl=np.zeros((len(ivals),epo.shape[1],epo.shape[2]))
+
     for i in range(len(ivals)):
        meanAmpl[i]=np.mean(epo[sampleIndices[i],:,:].squeeze(),axis=0)
        
@@ -185,3 +188,33 @@ def balanceClasses(epo,mrk_class,_type='upsample'):
     while epo.shape[2]<mrk_class_.shape[0]:
         epo = np.concatenate((epo,epo[:,:,sample_indices[:(mrk_class_.shape[0]-epo.shape[2])]]),axis=2)
     return epo,mrk_class_
+
+def classifyTargetVsArtifact(clf,mrk_class_a,epo_o_target,epo_a,ivals,epo_t_o):
+    meanconf,stdconf=[],[]
+    for artifact_class in np.unique(mrk_class_a):
+        confusion_matrices=[]
+        mrk_class = np.concatenate([np.zeros(epo_o_target.shape[2]),mrk_class_a[mrk_class_a==artifact_class]],axis=0)
+        epo = np.concatenate([epo_o_target,epo_a[:,:,mrk_class_a==artifact_class]],axis=2)
+        meanAmplFeature,mrk_class = convertEpoToFeature(epo,epo_t_o,mrk_class,ivals)
+        scores = cross_validate(clf, meanAmplFeature.T, mrk_class, cv=20,return_estimator=True)
+        for estimator in scores['estimator']:
+            conf_mat = confusion_matrix(mrk_class,estimator.predict(meanAmplFeature.T),normalize='true')
+            confusion_matrices.append(conf_mat)
+        confusion_matrices = np.array(confusion_matrices)   
+        meanconf.append(np.mean(confusion_matrices,axis=0))
+        stdconf.append(np.std(confusion_matrices,axis=0))
+    return np.array(meanconf),np.array(stdconf)
+
+def classifyTargetVsArtifacts(clf,mrk_class,epo,ivals,epo_t_o):
+    confusion_matrices=[]
+
+    meanAmplFeature,mrk_class = convertEpoToFeature(epo,epo_t_o,mrk_class,ivals)
+    scores = cross_validate(clf, meanAmplFeature.T, mrk_class, cv=20,return_estimator=True)
+    for estimator in scores['estimator']:
+        estimator.predict(meanAmplFeature.T)
+        conf_mat = confusion_matrix(mrk_class,estimator.predict(meanAmplFeature.T),normalize='true')
+        confusion_matrices.append(conf_mat)
+    confusion_matrices = np.array(confusion_matrices)   
+    meanconf=np.mean(confusion_matrices,axis=0)
+    stdconf=np.std(confusion_matrices,axis=0)
+    return meanconf,stdconf

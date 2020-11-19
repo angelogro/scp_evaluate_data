@@ -11,7 +11,7 @@ import matplotlib.ticker as plticker
 import numpy as np
 from helpers import *
 
-def format_plot(ax,fig):
+def format_plot(ax,fig=None):
     #
     ax.axes.set_aspect('equal')
     # set the x-spine
@@ -97,3 +97,38 @@ def add_separating_line(ax,fig,m1,m2,w,scale=5,linestyle='-'):
                         [(mid[1]+w[0]*scale),(mid[1]-w[0]*scale)],
                          color='k',linewidth=1,ls=linestyle))
     
+def plot_contours(ax, clf, xx, yy, **params):
+    """Plot the decision boundaries for a classifier.
+
+    Parameters
+    ----------
+    ax: matplotlib axes object
+    clf: a classifier
+    xx: meshgrid ndarray
+    yy: meshgrid ndarray
+    params: dictionary of params to pass to contourf, optional
+    """
+    Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
+    Z = Z.reshape(xx.shape)
+    #Z = np.clip(Z,-1,1)
+    out = ax.contourf(xx, yy, Z, **params)
+    return out
+
+def make_meshgrid(x, y, h=.02):
+    """Create a mesh of points to plot in
+
+    Parameters
+    ----------
+    x: data to base x-axis meshgrid on
+    y: data to base y-axis meshgrid on
+    h: stepsize for meshgrid, optional
+
+    Returns
+    -------
+    xx, yy : ndarray
+    """
+    x_min, x_max = x.min() - 1, x.max() + 1
+    y_min, y_max = y.min() - 1, y.max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                         np.arange(y_min, y_max, h))
+    return xx, yy

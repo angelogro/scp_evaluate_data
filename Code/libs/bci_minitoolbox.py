@@ -38,7 +38,7 @@ def load_data(fname):
         return X, fs, clab, mnt
 
 
-def scalpmap(mnt, v, clim='minmax', cb_label='',clab=None): 
+def scalpmap(mnt, v, clim='minmax', cb_label='',clab=None,ax=None,setcbar=False): 
     '''
     Usage:
         scalpmap(mnt, v, clim='minmax', cb_label='')
@@ -62,7 +62,7 @@ def scalpmap(mnt, v, clim='minmax', cb_label='',clab=None):
     mask_y, mask_x = np.ogrid[-a:n-a, -b:n-b]
     mask = mask_x*mask_x + mask_y*mask_y >= r*r    
     zi[mask] = np.nan
-
+    pcm=None
     if clim=='minmax':
         vmin = v.min()
         vmax = v.max()
@@ -72,14 +72,23 @@ def scalpmap(mnt, v, clim='minmax', cb_label='',clab=None):
     else:
         vmin = clim[0]
         vmax = clim[1]
-    
-    plt.imshow(zi, vmin=vmin, vmax=vmax, origin='lower', extent=[-1, 1, -1, 1], cmap='jet')
-    plt.colorbar(shrink=.5, label=cb_label)
-    plt.scatter(mnt[:,0], mnt[:,1], c='k', marker='+', vmin=vmin, vmax=vmax)
+    if ax ==None:
+        plt.imshow(zi, vmin=vmin, vmax=vmax, origin='lower', extent=[-1, 1, -1, 1], cmap='jet')
+        plt.colorbar(shrink=.5, label=cb_label)
+        plt.scatter(mnt[:,0], mnt[:,1], c='k', marker='+', vmin=vmin, vmax=vmax)
+    else:
+        pcm=ax.imshow(zi, vmin=vmin, vmax=vmax, origin='lower', extent=[-1, 1, -1, 1], cmap='jet')
+        
+        ax.scatter(mnt[:,0], mnt[:,1], c='k', marker='+', vmin=vmin, vmax=vmax)
     if clab is not None:
         for i,lab in enumerate(clab):
             plt.annotate(lab,(mnt[i,0],mnt[i,1]))
-    plt.axis('off')
+    if ax ==None:
+        plt.axis('off')
+    else:
+        ax.axis('off')
+    
+    return pcm
 
 
 def makeepochs(X, fs, mrk_pos, ival):

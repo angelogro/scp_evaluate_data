@@ -11,6 +11,7 @@ from wyrm import io
 import bci_minitoolbox as bci
 import numpy as np
 import os
+from matplotlib import pyplot as plt
 
 def load_data(dat,dattype='oddball'):
     clab = dat.axes[1]
@@ -40,7 +41,8 @@ def load_multiple_data(list_vhdr_files,dattype='artifact'):
     
     
 def prepareData(data_list,notch50Hz=True,highPassCutOff=0.1,lowPassCutOff=100,ival= [-100, 1000],ref_ival= [-100, 0],
-                downsample_factor=10,reject_channels= None,reject_voltage = 20,nRemovePCA = 0,bandpass = None):
+                downsample_factor=10,reject_channels= None,reject_voltage = 20,nRemovePCA = 0,bandpass = None,
+                performpca=False):
     
     epo_list=[]
     mrk_class_list=[]
@@ -53,20 +55,24 @@ def prepareData(data_list,notch50Hz=True,highPassCutOff=0.1,lowPassCutOff=100,iv
                 clab_idx = clab_idx & (clab!=reject_chanel)
             cnt = cnt[clab_idx,:]
             clab = clab[clab_idx]
+            
         if notch50Hz:
             cnt = notchFilter(cnt)
         if highPassCutOff > 0 :
             cnt = hpFilter(cnt,fc=highPassCutOff)
         if lowPassCutOff > 0 :
             cnt = lpFilter(cnt,fc=lowPassCutOff)
-        if bandpass != None:         
-            b,a = signal.butter(8,[bandpass[0]/(fs/2),bandpass[1]/(fs/2)], btype = 'bandpass')
-            cnt = signal.lfilter(b,a,cnt,axis=0)
         if nRemovePCA > 0:
             cnt = removePCASignal(cnt,n=nRemovePCA)
+        if bandpass != None:         
+            cnt = bpFilter(cnt,fc=bandpass)
+        if performpca==True:
+            performPCA(cnt,mnt=mnt)
+        
             
         if downsample_factor>0:
             cnt,fs = downSampleCnt(cnt, fs, downsample_factor)
+        
         # Segment continuous data into epochs:
         epo, epo_t = bci.makeepochs(cnt, fs, (mrk_pos/downsample_factor).astype(int), ival)
         epo = bci.baseline(epo, epo_t, ref_ival)
@@ -119,12 +125,17 @@ def notchFilter(cnt,f=50,fs=1000,Q=10):
     b,a = signal.iirnotch(f, Q,fs=fs)
     return signal.filtfilt(b,a,cnt)
 
-def hpFilter(cnt,fc=50,fs=1000,Q=30):
-    sos = signal.butter(Q,fc, btype = 'highpass',output='sos',fs=fs)
+def hpFilter(cnt,fc=50,fs=1000,Q=100):
+    sos = signal.cheby2(4, 40, fc, 'hp', fs=1000, output='sos')
+    #sos = signal.butter(Q,fc*2/fs, btype = 'highpass',output='sos',analog=False)#,fs=fs,analog=True)
     return signal.sosfilt(sos,cnt,axis=1)
 
 def lpFilter(cnt,fc=50,fs=1000,Q=10):
-    sos = signal.butter(Q,fc, btype = 'lowpass',output='sos',fs=fs)
+    sos = signal.cheby2(4, 40, fc, 'lp', fs=1000, output='sos')
+    return signal.sosfilt(sos,cnt,axis=1)
+
+def bpFilter(cnt,fc=50,fs=1000,Q=10):
+    sos = signal.cheby2(4, 40, fc, 'bandpass', fs=1000, output='sos')
     return signal.sosfilt(sos,cnt,axis=1)
 
 def selectChannelFromEpo(epo,clab,selectedChannels):
@@ -146,7 +157,19 @@ def removePCASignal(X,n=1):
     
     Xm = X-Xmean[:,np.newaxis]
     d,v=np.linalg.eig(np.cov(X))
+   
     S = np.dot(v.T,Xm)
     Seeg = S[n:]
     return np.dot(v[:,n:],Seeg)
+
+def performPCA(X,mnt=None):
+    Xmean = np.mean(X,axis=1)
+    
+    Xm = X-Xmean[:,np.newaxis]
+    d,v=np.linalg.eig(np.cov(X))
+    print(d)
+    for i in range(v.shape[0]):
+        plt.figure()
+        bci.scalpmap(mnt,v[:,i])
+    return d,v
 
