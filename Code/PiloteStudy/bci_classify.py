@@ -189,14 +189,14 @@ def balanceClasses(epo,mrk_class,_type='upsample'):
         epo = np.concatenate((epo,epo[:,:,sample_indices[:(mrk_class_.shape[0]-epo.shape[2])]]),axis=2)
     return epo,mrk_class_
 
-def classifyTargetVsArtifact(clf,mrk_class_a,epo_o_target,epo_a,ivals,epo_t_o):
+def classifyTargetVsArtifact(clf,mrk_class_a,epo_o_target,epo_a,ivals,epo_t_o,cv=20):
     meanconf,stdconf=[],[]
     for artifact_class in np.unique(mrk_class_a):
         confusion_matrices=[]
         mrk_class = np.concatenate([np.zeros(epo_o_target.shape[2]),mrk_class_a[mrk_class_a==artifact_class]],axis=0)
         epo = np.concatenate([epo_o_target,epo_a[:,:,mrk_class_a==artifact_class]],axis=2)
         meanAmplFeature,mrk_class = convertEpoToFeature(epo,epo_t_o,mrk_class,ivals)
-        scores = cross_validate(clf, meanAmplFeature.T, mrk_class, cv=20,return_estimator=True)
+        scores = cross_validate(clf, meanAmplFeature.T, mrk_class, cv=cv,return_estimator=True)
         for estimator in scores['estimator']:
             conf_mat = confusion_matrix(mrk_class,estimator.predict(meanAmplFeature.T),normalize='true')
             confusion_matrices.append(conf_mat)
@@ -205,11 +205,11 @@ def classifyTargetVsArtifact(clf,mrk_class_a,epo_o_target,epo_a,ivals,epo_t_o):
         stdconf.append(np.std(confusion_matrices,axis=0))
     return np.array(meanconf),np.array(stdconf)
 
-def classifyTargetVsArtifacts(clf,mrk_class,epo,ivals,epo_t_o):
+def classifyTargetVsArtifacts(clf,mrk_class,epo,ivals,epo_t_o,cv=20):
     confusion_matrices=[]
 
     meanAmplFeature,mrk_class = convertEpoToFeature(epo,epo_t_o,mrk_class,ivals)
-    scores = cross_validate(clf, meanAmplFeature.T, mrk_class, cv=20,return_estimator=True)
+    scores = cross_validate(clf, meanAmplFeature.T, mrk_class, cv=cv,return_estimator=True)
     for estimator in scores['estimator']:
         estimator.predict(meanAmplFeature.T)
         conf_mat = confusion_matrix(mrk_class,estimator.predict(meanAmplFeature.T),normalize='true')

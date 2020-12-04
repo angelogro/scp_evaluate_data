@@ -74,7 +74,7 @@ def plotPSDfromEpoMulticlass(epo,mrk_class,clab,sel_channel,sel_mrk_classes,datt
         plt.ylabel('PSD')
         #plt.ylim(0,0.5)
         plt.legend()
-        intervals = 1.0
+        intervals = 2.0
 
         loc = plticker.MultipleLocator(base=intervals)
         plt.gca().xaxis.set_major_locator(loc)
@@ -245,10 +245,12 @@ def plotMeanArtifactSignals(epo_artifacts,epo_t,clab,channels,mrk_class):
         epo_a=epo_artifacts[:,index,:]
 
         for j,artifact_class in zip(range(len(np.unique(mrk_class))),np.unique(mrk_class)):
+            print(epo_a[:,:,mrk_class==artifact_class].shape)
             meanArtifact=np.mean(epo_a[:,:,mrk_class==artifact_class],axis=2)
-            smooth_meanArtifact=savgol_filter(meanArtifact,11,3,axis=0)
-            #np.savetxt(str(artifact_class),meanArtifact)
-            axs[i].plot(epo_t,smooth_meanArtifact,label=artifactDict[artifact_class],linestyle=linestyles[j],linewidth=3)
+            print(meanArtifact.shape)
+            smooth_meanArtifact=savgol_filter(meanArtifact,5,3,axis=0)
+            smooth_meanArtifact=meanArtifact
+            axs[i].plot(epo_t,smooth_meanArtifact,label=artifactDict[artifact_class],linestyle=linestyles[j],linewidth=1)
         
             axs[i].set_xlabel('time [ms]'); axs[i].set_ylabel('voltage [µV]');
             axs[i].set_title('Averaged Epoch at {}'.format(chan))

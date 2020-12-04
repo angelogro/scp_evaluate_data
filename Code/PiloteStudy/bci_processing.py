@@ -8,6 +8,7 @@ Created on Tue Feb 25 11:55:22 2020
 import numpy as np
 import scipy as sp
 from scipy import signal
+from scipy.signal import savgol_filter
 
 def calculate_csp(epo,mrk_class, classes=None):
     """Calculate the Common Spatial Pattern (CSP) for two classes.
@@ -201,3 +202,33 @@ def calcPSDfromEpoMultichannel(epo,mrk_class,clab,sel_channels,sel_mrk_class,fs,
         lstPSD.append(psd[idx_range])
 
     return f[idx_range],lstPSD
+
+def saveMeanArtifactSignals(epo_a,epo_t,mrk_class,n_batches=0):
+
+    for j,artifact_class in zip(range(len(np.unique(mrk_class))),np.unique(mrk_class)):
+        if n_batches==0:
+            
+            meanArtifact=np.mean(epo_a[:,:,mrk_class==artifact_class],axis=2)
+            smooth_meanArtifact=savgol_filter(meanArtifact,11,3,axis=0)
+            np.savetxt(str(artifact_class),smooth_meanArtifact)
+        else:
+            
+            epo = epo_a[:,:,mrk_class==artifact_class]
+            batchsize=int(epo.shape[2]/n_batches)
+            oldindex=0
+            for i in range(epo.shape[2]):  
+                print(oldindex)
+                meanArtifact=np.mean(epo[:,:,oldindex:oldindex+batchsize],axis=2)
+                smooth_meanArtifact=savgol_filter(meanArtifact,11,3,axis=0)
+                np.savetxt(str(artifact_class)+'_'+str(i),smooth_meanArtifact)
+                oldindex+=batchsize
+                
+                if oldindex+batchsize>epo.shape[2]:
+                    meanArtifact=np.mean(epo[:,:,oldindex:],axis=2)
+                    smooth_meanArtifact=savgol_filter(meanArtifact,11,3,axis=0)
+                    np.savetxt(str(artifact_class)+'_'+str(i),smooth_meanArtifact)
+                    break
+              
+                    
+                    
+                    

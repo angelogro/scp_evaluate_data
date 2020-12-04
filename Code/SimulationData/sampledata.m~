@@ -1,7 +1,7 @@
 
 startup()
 simdata='/home/angelo/Daten/Master_Arbeit/Master_Arbeit/Data/simulation';
-n_epochs =1;
+n_epochs =1000;
 sample_rate = 100; % in Hz
 length_epochs = 1110; % in ms
 % each source will get the same type of activation: brown coloured noise
@@ -14,7 +14,7 @@ channels = {'Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3',...
     'CP1', 'CP2', 'FC5', 'FC6', 'CP5', 'CP6', 'TP9', 'TP10', 'POz'};
 
 % Standard Deviations of erp target sources
-stddevs=[0];
+stddevs=[0.8,1];
 % Parameters characterizing the noises
 noise_params=[5 10 20; % number of sources
     1 10 100]; % Maximum source amplitude
@@ -29,5 +29,5 @@ end
 % Add noise in equally spaced setup
 %savenoisedata(noise_params,leadfield,epochs_noise,simdata,channels,noise_locs);
 
-saveerpdata(stddevs,noise_params,leadfield,epochs_noise,simdata,channels,noise_locs);
+%saveerpdata(stddevs,noise_params,leadfield,epochs_noise,simdata,channels,noise_locs);
 

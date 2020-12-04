@@ -51,7 +51,7 @@ data_list = load_multiple_data([os.path.join(measurementFolder,'2020-MSc-Angelo-
                                                                      dattype='oddball')
 #%%
 epo_o,epo_t_o,mrk_class_o,clab,mnt = prepareData(data_list,downsample_factor=10,highPassCutOff=highpass,lowPassCutOff=lowpass,ival=ival,
-                                                                     ref_ival=ref_ival,reject_voltage=1000,nRemovePCA = 5,
+                                                                     ref_ival=ref_ival,reject_voltage=1000,nRemovePCA = 0,
                                                                      performpca=False)  
 #%%
 data_list_art = load_multiple_data([os.path.join(measurementFolder,'2020-MSc-Angelo-1__artifactTemp.vhdr'),
@@ -60,7 +60,7 @@ data_list_art = load_multiple_data([os.path.join(measurementFolder,'2020-MSc-Ang
                                          os.path.join(measurementFolder,'2020-MSc-Angelo-1__artifactTemp04.vhdr')])
 #%%
 epo_a,epo_t_a,mrk_class_a,clab,mnt = prepareData(data_list_art,downsample_factor=10,highPassCutOff=highpass,lowPassCutOff=lowpass,ival=ival,
-                                                                     ref_ival=ref_ival,reject_voltage=1000,nRemovePCA = 5,performpca=False
+                                                                     ref_ival=ref_ival,reject_voltage=1000,nRemovePCA = 0,performpca=False
                                                                      )
 #%%
 """
@@ -147,10 +147,10 @@ frequency_bands=[[2,3.5],[3.5,10],[10.5,12],[13,15],[16,50]]
 epo_fr=[]
 for band in frequency_bands:
     epo_o,epo_t_o,mrk_class_o,clab,mnt = prepareData(data_list,downsample_factor=10,highPassCutOff=highpass,lowPassCutOff=lowpass,ival=ival,
-                                                                         ref_ival=ref_ival,reject_voltage=1000,nRemovePCA = 5,bandpass=band,
+                                                                         ref_ival=ref_ival,reject_voltage=1000,nRemovePCA = 0,bandpass=band,
                                                                          performpca=False) 
     epo_a,epo_t_a,mrk_class_a,clab,mnt = prepareData(data_list_art,downsample_factor=10,highPassCutOff=highpass,lowPassCutOff=lowpass,ival=ival,
-                                                                     ref_ival=ref_ival,reject_voltage=1000,nRemovePCA = 5,bandpass=band,performpca=False,
+                                                                     ref_ival=ref_ival,reject_voltage=1000,nRemovePCA = 0,bandpass=band,performpca=False,
                                                                      )
     epo_o_target = epo_o[:,:,mrk_class_o==0]
 
@@ -238,11 +238,11 @@ df = pd.DataFrame(zip(xaxis*2,["TP"]*6+["TN"]*6,np.concatenate((meanconf[:,0,0],
 grouped_barplot(df, "Artifact Type", "Type", "Average Rate", "std",colors=plotcolours,
                 title="CSP - Classification Accuracy",legend=False) 
 #%%
-"""
+
 
 # Generation of Mean epochs of artifacts
-
-plotMeanArtifactSignals(epo_a,epo_t_a,clab,['Fz','Cz','Pz'],mrk_class_a)
+saveMeanArtifactSignals(epo_a,epo_t_a,mrk_class_a,n_batches=8)
+#plotMeanArtifactSignals(epo_a,epo_t_a,clab,['Cz','Pz'],mrk_class_a)
 
 #%%
 # Generation of scalp map plots of artifacts
@@ -258,4 +258,3 @@ plotMeanOddballSignals(epo_o,epo_t_o,clab,['Fz','Cz','Pz'],mrk_class_o)
 
 plotScalpmapsArtifact(epo_o, epo_t_o, clab, mrk_class_o, arti_ivals, mnt)
 
-"""
